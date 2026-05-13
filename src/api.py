@@ -1,4 +1,5 @@
 import requests
+import os
 
 
 class AeroplanesAPI:
@@ -9,18 +10,15 @@ class AeroplanesAPI:
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
         self.opensky_url = "https://opensky-network.org/api/states/all"
         # Таймаут для запросов (в секундах)
-        self.timeout = 10
+        self.timeout = 20
+        user_email = os.environ.get('AIRPLANE_TRACKER_EMAIL')
+        self.headers = {
+            'User-Agent': f'AirplaneTracker/1.0 ({user_email})',
+            'Accept': 'application/json'
+        }
 
     def get_country_coordinates(self, country_name):
-        """
-        Получает координаты страны через Nominatim API
-
-        Аргументы:
-            country_name: название страны (например, "Russia")
-
-        Возвращает:
-            Словарь с координатами: юг, север, запад, восток
-        """
+        """Получает координаты страны через Nominatim API"""
         try:
             # Параметры запроса
             params = {
@@ -29,11 +27,12 @@ class AeroplanesAPI:
                 'limit': 1  # Берем только первый результат
             }
 
-            # Отправляем GET запрос
+            # Отправляем GET запрос с правильными заголовками
             print(f"  Запрос координат страны {country_name}...")
             response = requests.get(
                 self.nominatim_url,
                 params=params,
+                headers=self.headers,  # Добавляем заголовки!
                 timeout=self.timeout
             )
 
@@ -46,28 +45,46 @@ class AeroplanesAPI:
             # Если страна найдена
             if data and len(data) > 0:
                 bounding_box = data[0].get('boundingbox', [])
-                if bounding_box:
+                if bounding_box and len(bounding_box) >= 4:
+                    # Nominatim возвращает строки, преобразуем в числа
+                    south = float(bounding_box[0])
+                    north = float(bounding_box[1])
+                    west = float(bounding_box[2])
+                    east = float(bounding_box[3])
+
+                    print(f"Найдены координаты: {south}°S, {north}°N, {west}°W, {east}°E")
+
                     return {
-                        'south': float(bounding_box[0]),  # Южная граница
-                        'north': float(bounding_box[1]),  # Северная граница
-                        'west': float(bounding_box[2]),  # Западная граница
-                        'east': float(bounding_box[3])  # Восточная граница
+                        'south': south,
+                        'north': north,
+                        'west': west,
+                        'east': east
                     }
 
             # Если страна не найдена
             raise ValueError(f"Страна '{country_name}' не найдена")
 
         except requests.Timeout:
-            raise Exception(f"Превышено время ожидания при запросе координат")
+            raise Exception("Превышено время ожидания при запросе координат. Попробуйте еще раз.")
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                raise Exception("Ошибка доступа к API. Попробуйте использовать другое название страны.")
+            else:
+                raise Exception(f"HTTP ошибка {e.response.status_code}: {e}")
         except requests.RequestException as e:
-            raise Exception(f"Ошибка при запросе координат: {e}")
-
+            raise Exception(f"Ошибка подключения: {e}")
+        except ValueError as e:
+            raise Exception(str(e))
+        except Exception as e:
+            raise Exception(f"Неожиданная ошибка: {e}")
 
     def get_aeroplanes_by_area(self, country_name):
         """Получает список самолетов в воздушном пространстве страны"""
         try:
             # 1. Получаем координаты страны
             coordinates = self.get_country_coordinates(country_name)
+
+            print(f"  Координаты получены, запрашиваем самолеты...")
 
             # 2. Формируем запрос к OpenSky API
             params = {
@@ -78,7 +95,7 @@ class AeroplanesAPI:
             }
 
             # 3. Отправляем запрос к OpenSky
-            print(f"  Запрос данных о самолетах...")
+            # OpenSky не требует специального User-Agent
             response = requests.get(
                 self.opensky_url,
                 params=params,
@@ -94,13 +111,18 @@ class AeroplanesAPI:
             if data and 'states' in data:
                 states = data['states']
                 if states:
+                    print(f"  Найдено {len(states)} записей, обрабатываем...")
+
                     for state in states:
                         # Проверяем, что данные есть
                         if state and len(state) >= 10:
+                            # Очищаем позывной от пробелов
+                            callsign = state[1].strip() if state[1] else ""
+
                             # Создаем словарь с информацией о самолете
                             aeroplane = {
                                 'icao24': state[0],  # Уникальный код
-                                'callsign': state[1],  # Позывной
+                                'callsign': callsign,  # Позывной
                                 'origin_country': state[2],  # Страна регистрации
                                 'longitude': state[5],  # Долгота
                                 'latitude': state[6],  # Широта
@@ -111,12 +133,18 @@ class AeroplanesAPI:
                             }
 
                             # Пропускаем самолеты без позывного
-                            if aeroplane['callsign'] and aeroplane['origin_country']:
+                            if callsign and aeroplane['origin_country']:
                                 # Конвертируем скорость из м/с в км/ч
                                 if aeroplane['velocity']:
                                     aeroplane['velocity'] = round(aeroplane['velocity'] * 3.6, 2)
 
                                 aeroplanes.append(aeroplane)
+
+                    print(f"Обработано {len(aeroplanes)} самолетов с позывными")
+                else:
+                    print(f"В воздушном пространстве {country_name} нет самолетов")
+            else:
+                print(f"Не удалось получить данные от OpenSky API")
 
             return aeroplanes
 
