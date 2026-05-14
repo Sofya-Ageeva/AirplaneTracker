@@ -1,8 +1,17 @@
+from typing import Optional, Dict, Any
+
+
 class Aeroplane:
     """Класс, представляющий самолет"""
 
-    def __init__(self, callsign, origin_country, velocity=None, altitude=None,
-                 icao24=None, heading=None, on_ground=False):
+    def __init__(self,
+                 callsign: str,
+                 origin_country: str,
+                 velocity: Optional[float]=None,
+                 altitude: Optional[float]=None,
+                 icao24: Optional[str]=None,
+                 heading: Optional[float]=None,
+                 on_ground: Optional[bool]=False) -> None:
         """Создание нового самолета"""
         # Проверяем, что обязательные поля не пустые
         if not callsign:
@@ -10,14 +19,13 @@ class Aeroplane:
         if not origin_country:
             raise ValueError("Страна регистрации не может быть пустой")
 
-        # Сохраняем данные (с нижним подчеркиванием - значит "приватные")
-        self._callsign = callsign
-        self._origin_country = origin_country
-        self._velocity = velocity if velocity is not None else 0.0
-        self._altitude = altitude if altitude is not None else 0.0
-        self._icao24 = icao24 if icao24 else ""
-        self._heading = heading if heading is not None else 0.0
-        self._on_ground = on_ground
+        self._callsign: str = callsign
+        self._origin_country: str = origin_country
+        self._velocity: float = velocity if velocity is not None else 0.0
+        self._altitude: float = altitude if altitude is not None else 0.0
+        self._icao24: str = icao24 if icao24 else ""
+        self._heading: float = heading if heading is not None else 0.0
+        self._on_ground: bool = on_ground if on_ground is not None else False
 
         # Проверяем, что скорость и высота не отрицательные
         if self._velocity < 0:
@@ -27,49 +35,42 @@ class Aeroplane:
 
     # Геттеры - методы для получения значений
     @property
-    def callsign(self):
+    def callsign(self) -> str:
         """Позывной самолета"""
         return self._callsign
 
     @property
-    def origin_country(self):
+    def origin_country(self) -> str:
         """Страна регистрации"""
         return self._origin_country
 
     @property
-    def velocity(self):
+    def velocity(self) -> float:
         """Скорость в км/ч"""
         return self._velocity
 
     @property
-    def altitude(self):
+    def altitude(self) -> float:
         """Высота в метрах"""
         return self._altitude
 
     @property
-    def icao24(self):
+    def icao24(self) -> str:
         """ICAO24 идентификатор"""
         return self._icao24
 
     @property
-    def heading(self):
+    def heading(self) -> float:
         """Курс в градусах"""
         return self._heading
 
     @property
-    def on_ground(self):
+    def on_ground(self) -> bool:
         """Находится ли на земле"""
         return self._on_ground
 
-    def compare_by_velocity(self, other):
-        """
-        Сравнивает два самолета по скорости
-
-        Возвращает:
-            1 - если текущий самолет быстрее
-            -1 - если текущий самолет медленнее
-            0 - если скорости равны
-        """
+    def compare_by_velocity(self, other: 'Aeroplane') -> int:
+        """Сравнение скорости самолетов"""
         if not isinstance(other, Aeroplane):
             raise TypeError("Можно сравнивать только с объектом Aeroplane")
 
@@ -80,15 +81,8 @@ class Aeroplane:
         else:
             return 0
 
-    def compare_by_altitude(self, other):
-        """
-        Сравнивает два самолета по высоте
-
-        Возвращает:
-            1 - если текущий самолет выше
-            -1 - если текущий самолет ниже
-            0 - если высоты равны
-        """
+    def compare_by_altitude(self, other: 'Aeroplane') -> int:
+        """Сравнение высоты самолетов"""
         if not isinstance(other, Aeroplane):
             raise TypeError("Можно сравнивать только с объектом Aeroplane")
 
@@ -99,15 +93,15 @@ class Aeroplane:
         else:
             return 0
 
-    def __str__(self):
-        """Красивый вывод информации о самолете"""
+    def __str__(self) -> str:
+        """Вывод информации о самолете"""
         status = "на земле" if self._on_ground else "в воздухе"
         return (f"✈ {self._callsign} | {self._origin_country} | "
                 f"Скорость: {self._velocity} км/ч | Высота: {self._altitude} м | "
                 f"Статус: {status}")
 
-    def to_dict(self):
-        """Превращает самолет в словарь (для сохранения в JSON)"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Запись данных о самолетах в словарь"""
         return {
             'callsign': self._callsign,
             'origin_country': self._origin_country,
@@ -119,7 +113,7 @@ class Aeroplane:
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data: Dict[str, Any]) -> 'Aeroplane':
         """Создает самолет из словаря"""
         return cls(
             callsign=data.get('callsign', ''),

@@ -1,11 +1,12 @@
 import pytest
+
 from src.aeroplane import Aeroplane
 
 
 class TestAeroplane:
     """Тесты для самолета"""
 
-    def test_create_aeroplane(self):
+    def test_create_aeroplane(self) -> None:
         """Тест создания самолета"""
         plane = Aeroplane("AFL123", "Russia", 850, 10000)
 
@@ -14,35 +15,35 @@ class TestAeroplane:
         assert plane.velocity == 850
         assert plane.altitude == 10000
 
-    def test_create_with_default_values(self):
-        """Тест создания с значениями по умолчанию"""
+    def test_create_with_default_values(self) -> None:
+        """Тест создания со значениями по умолчанию"""
         plane = Aeroplane("TEST", "Test Country")
 
         assert plane.velocity == 0
         assert plane.altitude == 0
-        assert plane.on_ground == False
+        assert plane.on_ground is False
 
-    def test_invalid_callsign(self):
+    def test_invalid_callsign(self) -> None:
         """Тест: пустой позывной"""
         with pytest.raises(ValueError):
             Aeroplane("", "Russia")
 
-    def test_invalid_country(self):
+    def test_invalid_country(self) -> None:
         """Тест: пустая страна"""
         with pytest.raises(ValueError):
             Aeroplane("AFL123", "")
 
-    def test_negative_velocity(self):
+    def test_negative_velocity(self) -> None:
         """Тест: отрицательная скорость"""
         with pytest.raises(ValueError):
             Aeroplane("AFL123", "Russia", velocity=-100)
 
-    def test_negative_altitude(self):
+    def test_negative_altitude(self) -> None:
         """Тест: отрицательная высота"""
         with pytest.raises(ValueError):
             Aeroplane("AFL123", "Russia", altitude=-500)
 
-    def test_compare_by_velocity(self):
+    def test_compare_by_velocity(self) -> None:
         """Тест сравнения по скорости"""
         plane1 = Aeroplane("A", "Rus", velocity=800)
         plane2 = Aeroplane("B", "Rus", velocity=700)
@@ -52,7 +53,7 @@ class TestAeroplane:
         assert plane2.compare_by_velocity(plane1) == -1  # plane2 медленнее
         assert plane1.compare_by_velocity(plane3) == 0  # равны
 
-    def test_compare_by_altitude(self):
+    def test_compare_by_altitude(self) -> None:
         """Тест сравнения по высоте"""
         plane1 = Aeroplane("A", "Rus", altitude=10000)
         plane2 = Aeroplane("B", "Rus", altitude=8000)
@@ -62,7 +63,7 @@ class TestAeroplane:
         assert plane2.compare_by_altitude(plane1) == -1  # plane2 ниже
         assert plane1.compare_by_altitude(plane3) == 0  # равны
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         """Тест преобразования в словарь"""
         plane = Aeroplane("AFL123", "Russia", 850, 10000)
         plane_dict = plane.to_dict()
@@ -72,7 +73,7 @@ class TestAeroplane:
         assert plane_dict['velocity'] == 850
         assert plane_dict['altitude'] == 10000
 
-    def test_from_dict(self):
+    def test_from_dict(self) -> None:
         """Тест создания из словаря"""
         data = {
             'callsign': 'AFL123',
@@ -91,7 +92,7 @@ class TestAeroplane:
         assert plane.velocity == 850
         assert plane.altitude == 10000
 
-    def test_string_representation(self):
+    def test_string_representation(self) -> None:
         """Тест строкового представления"""
         plane = Aeroplane("AFL123", "Russia", 850, 10000)
         plane_str = str(plane)

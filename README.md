@@ -21,7 +21,12 @@ git clone https://github.com/Sofya-Ageeva/AirplaneTracker.git
 ```
 pip install requirements.txt
 ```
-3. Запуск приложения
+3.  Настройка API
+Настройка переменной окружения для Nominatim API
+Важно: Для работы с Nominatim API необходимо указать ваш email 
+в переменной окружения AIRPLANE_TRACKER_EMAIL. 
+Это требование сервиса для идентификации запросов.
+4. Запуск приложения
 ```
 python main.py
 ```
