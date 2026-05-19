@@ -2,10 +2,11 @@ import json
 import os
 from typing import Any, Dict, List
 
+from src.abstract_storage import AbstractStorage
 from src.aeroplane import Aeroplane
 
 
-class JSONSaver:
+class JSONSaver(AbstractStorage):
     """Класс для сохранения самолетов в JSON файл"""
 
     def __init__(self, filename: str = "data/aeroplanes.json") -> None:
@@ -110,3 +111,37 @@ class JSONSaver:
         all_planes.sort(key=lambda x: x.altitude, reverse=True)
         # Возвращаем первые N
         return all_planes[:n]
+
+    def update_aeroplane(self, callsign: str, aeroplane: Aeroplane) -> bool:
+        """Обновляет информацию о самолете"""
+        data: List[Dict[str, Any]] = self.load_data()
+
+        for i, item in enumerate(data):
+            if item.get('callsign') == callsign:
+                data[i] = aeroplane.to_dict()
+                return self.save_data(data)
+
+        print(f"Самолет с позывным {callsign} не найден")
+        return False
+
+    def get_aeroplanes(self, **criteria: Any) -> List[Aeroplane]:
+        """Получает самолеты по критериям"""
+        data: List[Dict[str, Any]] = self.load_data()
+        aeroplanes: List[Aeroplane] = []
+
+        for item in data:
+            match: bool = True
+            for key, value in criteria.items():
+                if key in item and item[key] != value:
+                    match = False
+                    break
+
+            if match:
+                try:
+                    aeroplane: Aeroplane = Aeroplane.from_dict(item)
+                    aeroplanes.append(aeroplane)
+                except (ValueError, TypeError) as e:
+                    print(f"Ошибка при создании самолета: {e}")
+                    continue
+
+        return aeroplanes

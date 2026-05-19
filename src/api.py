@@ -3,8 +3,10 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from src.abstract_api import AbstractAPI
 
-class AeroplanesAPI:
+
+class AeroplanesAPI(AbstractAPI):
     """Класс для получения данных о самолетах через API"""
 
     def __init__(self) -> None:
