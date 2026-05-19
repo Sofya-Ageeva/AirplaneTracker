@@ -12,7 +12,7 @@ def show_menu():
     """Показывает главное меню"""
     print("\n" + "=" * 60)
     print("ГЛАВНОЕ МЕНЮ:")
-    print("1. Получить данные о самолетах из API")
+    print("1. Получить данные о самолетах")
     print("2. Показать сохраненные самолеты")
     print("3. Топ N самолетов по высоте")
     print("4. Фильтрация по стране регистрации")
@@ -26,12 +26,7 @@ def show_menu():
 def main():
     """Главная функция программы"""
 
-    print("""
-    ╔════════════════════════════════════════════╗
-    ║     ✈️  МОНИТОРИНГ САМОЛЕТОВ  ✈️           ║
-    ║     Отслеживание воздушных судов           ║
-    ╚════════════════════════════════════════════╝
-    """)
+    print("""МОНИТОРИНГ САМОЛЕТОВ""")
 
     # Создаем объекты для работы
     api = None
@@ -56,8 +51,44 @@ def main():
                 # Создаем объект API
                 api = AeroplanesAPI()
 
-                # Получаем данные
-                planes_data = api.get_aeroplanes_by_area(country)
+                # Пробуем разные варианты названий для некоторых стран
+                countries_to_try = [country]
+
+                # Добавляем альтернативные названия для популярных стран
+                country_alternatives = {
+                    'usa': ['United States', 'USA', 'United States of America'],
+                    'russia': ['Russia', 'Russian Federation'],
+                    'uk': ['United Kingdom', 'UK', 'Great Britain'],
+                    'germany': ['Germany', 'Deutschland'],
+                    'france': ['France', 'French Republic'],
+                    'spain': ['Spain', 'España'],
+                    'italy': ['Italy', 'Italia'],
+                    'china': ['China', 'People\'s Republic of China'],
+                }
+
+                # Проверяем, есть ли альтернативы для введенной страны
+                for key, alternatives in country_alternatives.items():
+                    if country.lower() == key or country.lower() in [a.lower() for a in alternatives]:
+                        countries_to_try = alternatives
+                        break
+
+                planes_data = []
+                last_error = None
+
+                # Пробуем каждый вариант названия
+                for try_country in countries_to_try:
+                    try:
+                        print(f"  Пробуем: {try_country}")
+                        planes_data = api.get_aeroplanes_by_area(try_country)
+                        if planes_data:
+                            print(f"  ✓ Успешно! Использовано название: {try_country}")
+                            break
+                    except Exception as e:
+                        last_error = e
+                        continue
+
+                if not planes_data and last_error:
+                    raise last_error
 
                 if planes_data:
                     # Преобразуем словари в объекты Aeroplane
@@ -75,30 +106,41 @@ def main():
                             )
                             current_aeroplanes.append(plane)
                         except Exception as e:
-                            print(f"Ошибка при создании самолета: {e}")
+                            print(f"  Предупреждение: не удалось создать самолет: {e}")
                             continue
 
                     print(f"\nНайдено {len(current_aeroplanes)} самолетов!")
-                    print_aeroplanes(current_aeroplanes, f"Самолеты в {country}")
 
-                    # Спрашиваем, сохранить ли
-                    save = input("\nСохранить в файл? (да/нет): ").strip().lower()
-                    if save in ['да', 'yes', 'y', 'д']:
-                        saved = 0
-                        for plane in current_aeroplanes:
-                            if storage.add_aeroplane(plane):
-                                saved += 1
-                        print(f"Сохранено {saved} самолетов")
+                    if current_aeroplanes:
+                        print_aeroplanes(current_aeroplanes, f"Самолеты в {country}")
+
+                        # Спрашиваем, сохранить ли
+                        save = input("\nСохранить в файл? (да/нет): ").strip().lower()
+                        if save in ['да', 'yes', 'y', 'д']:
+                            saved = 0
+                            for plane in current_aeroplanes:
+                                if storage.add_aeroplane(plane):
+                                    saved += 1
+                            print(f"Сохранено {saved} самолетов")
+                    else:
+                        print(f"В {country} найдены записи, но все без позывных")
                 else:
                     print(f"В {country} не найдено самолетов")
 
             except Exception as e:
-                print(f"Ошибка: {e}")
+                print(f"\nОшибка: {e}")
+                print("\nСоветы:")
+                print("  - Попробуйте использовать полное название страны (например, 'United States' вместо 'USA')")
+                print("  - Проверьте подключение к интернету")
+                print("  - Некоторые страны могут быть недоступны в API")
 
         # 2. Показать сохраненные самолеты
         elif choice == "2":
             saved_planes = storage.get_all()
-            print_aeroplanes(saved_planes, "Сохраненные самолеты")
+            if saved_planes:
+                print_aeroplanes(saved_planes, "Сохраненные самолеты")
+            else:
+                print("\nВ хранилище пока нет самолетов. Сначала получите данные (пункт 1)")
 
         # 3. Топ N по высоте
         elif choice == "3":
@@ -107,19 +149,21 @@ def main():
 
             if source == "1":
                 planes = current_aeroplanes
+                source_name = "текущих"
             elif source == "2":
                 planes = storage.get_all()
+                source_name = "сохраненных"
             else:
                 print("Неверный выбор")
                 continue
 
             if not planes:
-                print("Нет данных")
+                print(f"Нет {source_name} данных")
                 continue
 
             n = input_top_n()
             top_planes = get_top_aeroplanes(planes, n)
-            print_aeroplanes(top_planes, f"Топ {n} самолетов по высоте")
+            print_aeroplanes(top_planes, f"Топ {n} самолетов по высоте из {source_name} данных")
 
         # 4. Фильтрация по стране
         elif choice == "4":
@@ -127,14 +171,16 @@ def main():
 
             if source == "1":
                 planes = current_aeroplanes
+                source_name = "текущих"
             elif source == "2":
                 planes = storage.get_all()
+                source_name = "сохраненных"
             else:
                 print("Неверный выбор")
                 continue
 
             if not planes:
-                print("Нет данных")
+                print(f"Нет {source_name} данных")
                 continue
 
             countries = input_countries_list()
@@ -143,7 +189,7 @@ def main():
                 continue
 
             filtered = filter_by_country(planes, countries)
-            print_aeroplanes(filtered, f"Самолеты из стран: {', '.join(countries)}")
+            print_aeroplanes(filtered, f"Самолеты из стран: {', '.join(countries)} ({source_name} данные)")
 
         # 5. Фильтрация по высоте
         elif choice == "5":
@@ -151,23 +197,25 @@ def main():
 
             if source == "1":
                 planes = current_aeroplanes
+                source_name = "текущих"
             elif source == "2":
                 planes = storage.get_all()
+                source_name = "сохраненных"
             else:
                 print("Неверный выбор")
                 continue
 
             if not planes:
-                print("Нет данных")
+                print(f"Нет {source_name} данных")
                 continue
 
             min_alt, max_alt = input_altitude_range()
 
             if min_alt is not None and max_alt is not None:
                 filtered = filter_by_altitude_range(planes, min_alt, max_alt)
-                print_aeroplanes(filtered, f"Самолеты на высоте {min_alt}-{max_alt} м")
+                print_aeroplanes(filtered, f"Самолеты на высоте {min_alt}-{max_alt} м ({source_name} данные)")
             else:
-                print_aeroplanes(planes, "Все самолеты")
+                print_aeroplanes(planes, f"Все самолеты ({source_name} данные)")
 
         # 6. Сохранить текущие данные
         elif choice == "6":
@@ -183,7 +231,12 @@ def main():
 
         # 7. Очистить хранилище
         elif choice == "7":
-            confirm = input("Очистить все данные? (да/нет): ").strip().lower()
+            saved_planes = storage.get_all()
+            if not saved_planes:
+                print("Хранилище уже пустое")
+                continue
+
+            confirm = input(f"Удаление {len(saved_planes)} самолетов. (да/нет): ").strip().lower()
             if confirm in ['да', 'yes', 'y', 'д']:
                 if storage.clear_all():
                     print("Хранилище очищено")
@@ -191,7 +244,7 @@ def main():
                     print("Ошибка при очистке")
 
         else:
-            print("Неверный выбор")
+            print("Неверный выбор. Введите число от 0 до 7")
 
 
 if __name__ == "__main__":
